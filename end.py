@@ -146,6 +146,7 @@ FLAGS.num_train_epochs = 2.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
+FLAGS.version_2_with_negative=True
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
