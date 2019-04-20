@@ -62,7 +62,7 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 100,
+flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -137,12 +137,12 @@ FLAGS.init_checkpoint = BERT_BASE_DIR+'bert_model.ckpt'
 # FLAGS.init_checkpoint_start = 'output_start_6/model.ckpt-376'
 # FLAGS.init_checkpoint_end = 'output_end_6/model.ckpt-376'
 FLAGS.do_train = True
-FLAGS.train_file = SQUAD_DIR+'train-v2.0-min.json'
+FLAGS.train_file = SQUAD_DIR+'train-v2.0.json'
 FLAGS.do_predict = True
-FLAGS.predict_file = SQUAD_DIR+'dev-v2.0-min.json'
+FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
-FLAGS.num_train_epochs = 8.0
+FLAGS.num_train_epochs = 2.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
