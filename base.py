@@ -289,7 +289,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
 
   return model_fn
 
-  def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
+def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
   """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
   name_to_features = {
