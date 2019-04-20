@@ -338,7 +338,7 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
 
   return input_fn
 
-  RawResult = collections.namedtuple("RawResult",
+RawResult = collections.namedtuple("RawResult",
                                    ["unique_id", "start_logits", "end_logits"])
 
 
