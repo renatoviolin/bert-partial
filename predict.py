@@ -16,7 +16,7 @@ FLAGS = flags.FLAGS
 ## Required parameters
 flags.DEFINE_string(
     "bert_config_file", None,
-    "The config json file corresponding to the pre-trained BERT model. "
+    "The config json file  corresponding to the pre-trained BERT model. "
     "This specifies the model architecture.")
 flags.DEFINE_string("vocab_file", None,
                     "The vocabulary file that the BERT model was trained on.")
