@@ -348,7 +348,7 @@ def model_fn_builder_start(bert_config, init_checkpoint, learning_rate,
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-    (end_logits) = create_model_start(
+    (start_logits) = create_model_start(
         bert_config=bert_config,
         is_training=is_training,
         input_ids=input_ids,
