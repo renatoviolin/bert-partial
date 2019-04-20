@@ -62,7 +62,7 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 100,
+flags.DEFINE_integer("save_checkpoints_steps", 300,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -128,7 +128,7 @@ flags.DEFINE_string(
 
 BERT_BASE_DIR = 'uncased_L-12_H-768_A-12/'
 SQUAD_DIR = 'squad_min/'
-OUTPUT_DIR = 'output-start/'
+OUTPUT_DIR = 'output-end/'
 
 FLAGS.vocab_file = BERT_BASE_DIR+'vocab.txt'
 FLAGS.bert_config_file = BERT_BASE_DIR+'bert_config.json'
@@ -182,10 +182,10 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   unstacked_logits = tf.unstack(logits, axis=0)
 
-  start_logits = unstacked_logits[0]
-#   end_logits = unstacked_logits[0]
+#   start_logits = unstacked_logits[0]
+  end_logits = unstacked_logits[0]
 
-  return start_logits
+  return end_logits
 
 def model_fn_builder(bert_config, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
@@ -206,7 +206,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
 
     is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-    (start_logits) = create_model(
+    (end_logits) = create_model(
         bert_config=bert_config,
         is_training=is_training,
         input_ids=input_ids,
@@ -231,13 +231,13 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
       else:
         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-    tf.logging.info("**** Trainable Variables ****")
-    for var in tvars:
-      init_string = ""
-      if var.name in initialized_variable_names:
-        init_string = ", *INIT_FROM_CKPT*"
-      tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                      init_string)
+#     tf.logging.info("**** Trainable Variables ****")
+#     for var in tvars:
+#       init_string = ""
+#       if var.name in initialized_variable_names:
+#         init_string = ", *INIT_FROM_CKPT*"
+#       tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+#                       init_string)
 
     output_spec = None
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -251,13 +251,13 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
             tf.reduce_sum(one_hot_positions * log_probs, axis=-1))
         return loss
 
-      start_positions = features["start_positions"]
-#       end_positions = features["end_positions"]
+#       start_positions = features["start_positions"]
+      end_positions = features["end_positions"]
 
-      start_loss = compute_loss(start_logits, start_positions)
-#       end_loss = compute_loss(end_logits, end_positions)
+#       start_loss = compute_loss(start_logits, start_positions)
+      end_loss = compute_loss(end_logits, end_positions)
 
-      total_loss = start_loss
+      total_loss = end_loss
 
       train_op = optimization.create_optimizer(
           total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, tvars)
@@ -273,8 +273,8 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
     elif mode == tf.estimator.ModeKeys.PREDICT:
       predictions = {
           "unique_ids": unique_ids,
-          "start_logits": start_logits,
-#           "end_logits": end_logits,
+#           "start_logits": start_logits,
+          "end_logits": end_logits,
       }
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode, predictions=predictions, scaffold_fn=scaffold_fn)
@@ -336,8 +336,9 @@ def input_fn_builder(input_file, seq_length, is_training, drop_remainder):
 
   return input_fn
 
+
 RawResult = collections.namedtuple("RawResult",
-                                   ["unique_id", "start_logits"])
+                                   ["unique_id", "end_logits"])
 
 
 def write_predictions(all_examples, all_features, all_results, n_best_size,
@@ -357,7 +358,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
 
   _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
       "PrelimPrediction",
-      ["feature_index", "start_index", "start_logit"])
+      ["feature_index", "end_index", "end_logit"])
 
   all_predictions = collections.OrderedDict()
   all_nbest_json = collections.OrderedDict()
@@ -374,31 +375,31 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     null_end_logit = 0  # the end logit at the slice with min null score
     for (feature_index, feature) in enumerate(features):
       result = unique_id_to_result[feature.unique_id]
-      start_indexes = _get_best_indexes(result.start_logits, n_best_size)
-#       end_indexes = _get_best_indexes(result.end_logits, n_best_size)
+#       start_indexes = _get_best_indexes(result.start_logits, n_best_size)
+      end_indexes = _get_best_indexes(result.end_logits, n_best_size)
       # if we could have irrelevant answers, get the min score of irrelevant
       if FLAGS.version_2_with_negative:
-        feature_null_score = result.start_logits[0]
+        feature_null_score = result.end_logits[0]
         if feature_null_score < score_null:
           score_null = feature_null_score
           min_null_feature_index = feature_index
-          null_start_logit = result.start_logits[0]
-#           null_end_logit = result.end_logits[0]
-      for start_index in start_indexes:
-#         for end_index in end_indexes:
+#           null_start_logit = result.start_logits[0]
+          null_end_logit = result.end_logits[0]
+#       for start_index in start_indexes:
+        for end_index in end_indexes:
           # We could hypothetically create invalid predictions, e.g., predict
           # that the start of the span is in the question. We throw out all
           # invalid predictions.
-          if start_index >= len(feature.tokens):
-            continue
-#           if end_index >= len(feature.tokens):
+#           if start_index >= len(feature.tokens):
 #             continue
-          if start_index not in feature.token_to_orig_map:
+          if end_index >= len(feature.tokens):
             continue
-#           if end_index not in feature.token_to_orig_map:
+#           if start_index not in feature.token_to_orig_map:
 #             continue
-          if not feature.token_is_max_context.get(start_index, False):
+          if end_index not in feature.token_to_orig_map:
             continue
+#           if not feature.token_is_max_context.get(start_index, False):
+#             continue
 #           if end_index < start_index:
 #             continue
 #           length = end_index - start_index + 1
@@ -407,30 +408,30 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
           prelim_predictions.append(
               _PrelimPrediction(
                   feature_index=feature_index,
-                  start_index=start_index,
-#                   end_index=end_index,
-                  start_logit=result.start_logits[start_index],
-#                   end_logit=result.end_logits[end_index]
+#                   start_index=start_index,
+                  end_index=end_index,
+#                   start_logit=result.start_logits[start_index],
+                  end_logit=result.end_logits[end_index]
               ))
 
     if FLAGS.version_2_with_negative:
       prelim_predictions.append(
           _PrelimPrediction(
               feature_index=min_null_feature_index,
-              start_index=0,
-#               end_index=0,
-              start_logit=null_start_logit,
-#               end_logit=null_end_logit
+#               start_index=0,
+              end_index=0,
+#               start_logit=null_start_logit,
+              end_logit=null_end_logit
           ))
     prelim_predictions = sorted(
         prelim_predictions,
 #         key=lambda x: (x.start_logit + x.end_logit),
-        key=lambda x: (x.start_logit),
+        key=lambda x: (x.end_logit),
 
         reverse=True)
 
     _NbestPrediction = collections.namedtuple(  # pylint: disable=invalid-name
-        "NbestPrediction", ["text", "start_logit", "start_index"])
+        "NbestPrediction", ["text", "end_logit", "end_index"])
 
     seen_predictions = {}
     nbest = []
@@ -438,11 +439,11 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
       if len(nbest) >= n_best_size:
         break
       feature = features[pred.feature_index]
-      if pred.start_index > 0:  # this is a non-null prediction
-        tok_tokens = feature.tokens[pred.start_index]
+      if pred.end_index > 0:  # this is a non-null prediction
+        tok_tokens = feature.tokens[pred.end_index]
 #         tok_tokens = feature.tokens[pred.start_index:(pred.end_index + 1)]
-        orig_doc_start = feature.token_to_orig_map[pred.start_index]
-        orig_doc_end = feature.token_to_orig_map[pred.start_index]
+        orig_doc_start = feature.token_to_orig_map[pred.end_index]
+        orig_doc_end = feature.token_to_orig_map[pred.end_index]
 #         orig_doc_end = feature.token_to_orig_map[pred.end_index]
         orig_tokens = example.doc_tokens[orig_doc_start]
 #         orig_tokens = example.doc_tokens[orig_doc_start:(orig_doc_end + 1)]
@@ -469,10 +470,10 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
       nbest.append(
           _NbestPrediction(
               text=final_text,
-              start_logit=pred.start_logit,
-#               end_logit=pred.end_logit,
-          start_index=pred.start_index,
-#           end_index=pred.end_index
+#               start_logit=pred.start_logit,
+              end_logit=pred.end_logit,
+#               start_index=pred.start_index,
+              end_index=pred.end_index
           ))
 
     # if we didn't inlude the empty option in the n-best, inlcude it
@@ -480,14 +481,15 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
       if "" not in seen_predictions:
         nbest.append(
             _NbestPrediction(
-                text="", start_logit=null_start_logit,
-#                 end_logit=null_end_logit
+                text="", 
+#                 start_logit=null_start_logit,
+                end_logit=null_end_logit
             ))
     # In very rare edge cases we could have no valid predictions. So we
     # just create a nonce prediction in this case to avoid failure.
     if not nbest:
       nbest.append(
-          _NbestPrediction(text="empty", start_logit=0.0, start_index=0.0))
+          _NbestPrediction(text="empty", end_logit=0.0, end_index=0.0))
 #           _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0, start_index=0.0, end_index=0.0))
 
     assert len(nbest) >= 1
@@ -495,7 +497,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     total_scores = []
     best_non_null_entry = None
     for entry in nbest:
-      total_scores.append(entry.start_logit)
+      total_scores.append(entry.end_logit)
 #       total_scores.append(entry.start_logit + entry.end_logit)
       if not best_non_null_entry:
         if entry.text:
@@ -508,10 +510,10 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
       output = collections.OrderedDict()
       output["text"] = entry.text
       output["probability"] = probs[i]
-      output["start_logit"] = entry.start_logit
-#       output["end_logit"] = entry.end_logit
-      output["start_index"] = entry.start_index
-#       output["end_index"] = entry.end_index
+#       output["start_logit"] = entry.start_logit
+      output["end_logit"] = entry.end_logit
+#       output["start_index"] = entry.start_index
+      output["end_index"] = entry.end_index
       nbest_json.append(output)
 
     assert len(nbest_json) >= 1
@@ -520,7 +522,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
       all_predictions[example.qas_id] = nbest_json[0]["text"]
     else:
       # predict "" iff the null score - the score of best non-null > threshold
-      score_diff = score_null - best_non_null_entry.start_logit
+      score_diff = score_null - best_non_null_entry.end_logit
 #       score_diff = score_null - best_non_null_entry.start_logit - (
 #           best_non_null_entry.end_logit)
       scores_diff_json[example.qas_id] = score_diff
@@ -649,6 +651,7 @@ def _get_best_indexes(logits, n_best_size):
     best_indexes.append(index_and_score[i][0])
   return best_indexes
 
+
 def _compute_softmax(scores):
   """Compute softmax probability over raw logits."""
   if not scores:
@@ -670,6 +673,8 @@ def _compute_softmax(scores):
   for score in exp_scores:
     probs.append(score / total_sum)
   return probs
+
+
 class FeatureWriter(object):
   """Writes InputFeature to TF example file."""
 
@@ -708,6 +713,7 @@ class FeatureWriter(object):
   def close(self):
     self._writer.close()
 
+
 def validate_flags_or_throw(bert_config):
   """Validate the input FLAGS or throw an exception."""
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
@@ -736,7 +742,7 @@ def validate_flags_or_throw(bert_config):
         "The max_seq_length (%d) must be greater than max_query_length "
         "(%d) + 3" % (FLAGS.max_seq_length, FLAGS.max_query_length))
 
-# ================= TRAINING =========================
+
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -872,13 +878,13 @@ def main(_):
       if len(all_results) % 1000 == 0:
         tf.logging.info("Processing example: %d" % (len(all_results)))
       unique_id = int(result["unique_ids"])
-      start_logits = [float(x) for x in result["start_logits"].flat]
-#       end_logits = [float(x) for x in result["end_logits"].flat]
+    #   start_logits = [float(x) for x in result["start_logits"].flat]
+      end_logits = [float(x) for x in result["end_logits"].flat]
       all_results.append(
           RawResult(
               unique_id=unique_id,
-              start_logits=start_logits,
-#               end_logits=end_logits,
+            #   start_logits=start_logits,
+              end_logits=end_logits,
               ))
 
     output_prediction_file = os.path.join(FLAGS.output_dir, "predictions.json")
@@ -889,4 +895,6 @@ def main(_):
                       FLAGS.n_best_size, FLAGS.max_answer_length,
                       FLAGS.do_lower_case, output_prediction_file,
                       output_nbest_file, output_null_log_odds_file)
+
+
 tf.app.run()
