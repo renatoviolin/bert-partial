@@ -1002,7 +1002,7 @@ def main(_):
                 RawResult(
                         unique_id=unique_id,
                         start_logits=start_logits,
-                        # end_logits=end_logits,
+                        end_logits=0,
                         ))
     start = all_results
 
@@ -1021,7 +1021,7 @@ def main(_):
         all_results2.append(
                 RawResult(
                         unique_id=unique_id,
-                        # start_logits=start_logits,
+                        start_logits=0,
                         end_logits=end_logits,
                         ))
     end = all_results2
