@@ -128,7 +128,7 @@ flags.DEFINE_string(
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 BERT_BASE_DIR = 'uncased_L-12_H-768_A-12/'
-SQUAD_DIR = 'squad_min/'
+SQUAD_DIR = 'squad/'
 OUTPUT_DIR = 'output-predict/'
 
 FLAGS.vocab_file = BERT_BASE_DIR+'vocab.txt'

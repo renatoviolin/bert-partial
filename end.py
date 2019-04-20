@@ -127,7 +127,7 @@ flags.DEFINE_string(
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 BERT_BASE_DIR = 'uncased_L-12_H-768_A-12/'
-SQUAD_DIR = 'squad_min/'
+SQUAD_DIR = 'squad/'
 OUTPUT_DIR = 'output-end/'
 
 FLAGS.vocab_file = BERT_BASE_DIR+'vocab.txt'
@@ -138,7 +138,7 @@ FLAGS.init_checkpoint = BERT_BASE_DIR+'bert_model.ckpt'
 # FLAGS.init_checkpoint_end = 'output_end_6/model.ckpt-376'
 FLAGS.do_train = True
 FLAGS.train_file = SQUAD_DIR+'train-v2.0.json'
-FLAGS.do_predict = True
+FLAGS.do_predict = False
 FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
