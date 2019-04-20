@@ -133,7 +133,7 @@ FLAGS.do_predict = True
 FLAGS.predict_file = SQUAD_DIR+'dev-v2.0-min.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
-FLAGS.num_train_epochs = 2.0
+FLAGS.num_train_epochs = 8.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
@@ -174,8 +174,13 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
+  keep_prob = 1.0
+  if is_training:
+    keep_prob = 0.8
+
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
+  logits = tf.nn.dropout(logits, keep_prob)
 
   logits = tf.matmul(logits, output_weights, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias)
