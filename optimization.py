@@ -67,10 +67,7 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu, 
   if use_tpu:
     optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
 
-  if t_vars:
-    tvars = t_vars
-  else:
-    tvars = tf.trainable_variables()
+  tvars = tf.trainable_variables()
   
   print('==== INSIDE OPTIMIZATION ====')
   for t in tvars:
