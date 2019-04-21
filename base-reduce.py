@@ -62,7 +62,7 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 100,
+flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -188,8 +188,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_mean(unstacked_logits[0:192], 0)
-  e = tf.reduce_mean(unstacked_logits[192:384], 0)
+  s = tf.reduce_sum(unstacked_logits[0:192], 0)
+  e = tf.reduce_sum(unstacked_logits[192:384], 0)
 
   (start_logits, end_logits) = (s, e)
 
