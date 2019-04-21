@@ -170,13 +170,13 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   
   keep_prob = 1.0
   if is_training:
-    keep_prob = 0.3
+    keep_prob = 0.2
   else:
     keep_prob = 1.0
 
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
-  logits = tf.nn.relu(logits)
+  logits = modeling.gelu(logits)
   logits = tf.nn.dropout(logits, keep_prob)
 
   logits = tf.reshape(logits, [batch_size, seq_length, 384])
