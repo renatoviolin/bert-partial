@@ -62,7 +62,7 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 50,
+flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -172,13 +172,6 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias2 = tf.get_variable(
       "cls/squad/output_bias2", [384], initializer=tf.zeros_initializer())
 
-  output_weights3 = tf.get_variable(
-      "cls/squad/output_weights3", [2, 384],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
-
-  output_bias3 = tf.get_variable(
-      "cls/squad/output_bias3", [2], initializer=tf.zeros_initializer())
-
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
@@ -191,16 +184,14 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   logits = tf.nn.bias_add(logits, output_bias2)
   logits = tf.nn.relu(logits)
 
-  logits = tf.matmul(logits, output_weights3, transpose_b=True)
-  logits = tf.nn.bias_add(logits, output_bias3)
-  logits = tf.nn.relu(logits)
-
-  logits = tf.reshape(logits, [batch_size, seq_length, 2])
+  logits = tf.reshape(logits, [batch_size, seq_length, 384])
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
+  s = tf.reduce_sum(unstacked_logits[0:192], 0)
+  e = tf.reduce_sum(unstacked_logits[192:384], 0)
 
-  (start_logits, end_logits) = (unstacked_logits[0], unstacked_logits[1])
+  (start_logits, end_logits) = (s, e)
 
   return (start_logits, end_logits)
 
