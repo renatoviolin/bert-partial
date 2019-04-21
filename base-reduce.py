@@ -133,7 +133,7 @@ FLAGS.do_predict = True
 FLAGS.predict_file = SQUAD_DIR+'train-v2.0-min.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
-FLAGS.num_train_epochs = 8.0
+FLAGS.num_train_epochs = 20.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
@@ -230,7 +230,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   
   keep_prob = 1.0
   if is_training:
-    keep_prob = 0.2
+    keep_prob = 0.15
   else:
     keep_prob = 1.0
 
