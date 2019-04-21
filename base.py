@@ -131,7 +131,7 @@ FLAGS.train_file = SQUAD_DIR+'train-v2.0.json'
 FLAGS.do_predict = True
 # FLAGS.predict_file = SQUAD_DIR+'dev-v1.1.json'
 FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
-FLAGS.train_batch_size = 10
+FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
 FLAGS.num_train_epochs = 2.0
 FLAGS.max_seq_length = 384 
@@ -159,30 +159,25 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   hidden_size = final_hidden_shape[2]
 
   output_weights1 = tf.get_variable(
-      "cls/squad/output_weights1", [768, hidden_size],
+      "cls/squad/output_weights1", [384, hidden_size],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
   output_bias1 = tf.get_variable(
-      "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
-
-  output_weights2 = tf.get_variable(
-      "cls/squad/output_weights2", [384, 768],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
-
-  output_bias2 = tf.get_variable(
-      "cls/squad/output_bias2", [384], initializer=tf.zeros_initializer())
+      "cls/squad/output_bias1", [384], initializer=tf.zeros_initializer())
 
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
+  keep_prob = 1.0
+  if is_training:
+    keep_prob = 0.9
+  else:
+    keep_prob = 1.0
 
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
   logits = tf.nn.relu(logits)
-
-  logits = tf.matmul(logits, output_weights2, transpose_b=True)
-  logits = tf.nn.bias_add(logits, output_bias2)
-  logits = tf.nn.relu(logits)
+  logits = tf.nn.dropout(logits, keep_prob)
 
   logits = tf.reshape(logits, [batch_size, seq_length, 384])
   logits = tf.transpose(logits, [2, 0, 1])
