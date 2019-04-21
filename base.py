@@ -119,7 +119,7 @@ flags.DEFINE_float(
 
 
 BERT_BASE_DIR = 'uncased_L-12_H-768_A-12/'
-SQUAD_DIR = 'squad_min/'
+SQUAD_DIR = 'squad/'
 OUTPUT_DIR = 'output-base/'
 
 FLAGS.vocab_file = BERT_BASE_DIR+'vocab.txt'
@@ -127,13 +127,13 @@ FLAGS.bert_config_file = BERT_BASE_DIR+'bert_config.json'
 FLAGS.init_checkpoint = BERT_BASE_DIR+'bert_model.ckpt'
 # FLAGS.init_checkpoint = 'model/model.ckpt-62'
 FLAGS.do_train = True
-FLAGS.train_file = SQUAD_DIR+'train-v2.0-min.json'
+FLAGS.train_file = SQUAD_DIR+'train-v2.0.json'
 FLAGS.do_predict = True
 # FLAGS.predict_file = SQUAD_DIR+'dev-v1.1.json'
-FLAGS.predict_file = SQUAD_DIR+'dev-v2.0-min.json'
-FLAGS.train_batch_size = 12
+FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
+FLAGS.train_batch_size = 10
 FLAGS.learning_rate = 3e-5
-FLAGS.num_train_epochs = 8.0
+FLAGS.num_train_epochs = 2.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
@@ -165,30 +165,39 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias1 = tf.get_variable(
       "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
 
-  output_weights = tf.get_variable(
-      "cls/squad/output_weights", [2, 768],
+  output_weights2 = tf.get_variable(
+      "cls/squad/output_weights2", [384, 512],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
-  output_bias = tf.get_variable(
-      "cls/squad/output_bias", [2], initializer=tf.zeros_initializer())
+  output_bias2 = tf.get_variable(
+      "cls/squad/output_bias2", [384], initializer=tf.zeros_initializer())
+
+  output_weights3 = tf.get_variable(
+      "cls/squad/output_weights3", [2, 384],
+      initializer=tf.truncated_normal_initializer(stddev=0.02))
+
+  output_bias3 = tf.get_variable(
+      "cls/squad/output_bias3", [2], initializer=tf.zeros_initializer())
 
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
-  keep_prob = 1.0
-  if is_training:
-    keep_prob = 0.8
 
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
-  logits = tf.nn.dropout(logits, keep_prob)
+  logits = tf.nn.relu(logits)
 
-  logits = tf.matmul(logits, output_weights, transpose_b=True)
-  logits = tf.nn.bias_add(logits, output_bias)
+  logits = tf.matmul(logits, output_weights2, transpose_b=True)
+  logits = tf.nn.bias_add(logits, output_bias2)
+  logits = tf.nn.relu(logits)
+
+  logits = tf.matmul(logits, output_weights3, transpose_b=True)
+  logits = tf.nn.bias_add(logits, output_bias3)
+  logits = tf.nn.relu(logits)
 
   logits = tf.reshape(logits, [batch_size, seq_length, 2])
   logits = tf.transpose(logits, [2, 0, 1])
-
+  
   unstacked_logits = tf.unstack(logits, axis=0)
 
   (start_logits, end_logits) = (unstacked_logits[0], unstacked_logits[1])
@@ -271,7 +280,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
       train_op = optimization.create_optimizer(
           total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu, tvars)
 
-      logging_hook = tf.train.LoggingTensorHook({"Step": tf.train.get_global_step(), "Total loss" : total_loss}, every_n_iter=1)
+      logging_hook = tf.train.LoggingTensorHook({"Step": tf.train.get_global_step(), "Total loss" : total_loss}, every_n_iter=100)
 
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode,
