@@ -128,19 +128,19 @@ flags.DEFINE_string(
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
 BERT_BASE_DIR = 'uncased_L-12_H-768_A-12/'
-SQUAD_DIR = 'squad/'
+SQUAD_DIR = 'squad_min/'
 OUTPUT_DIR = 'output-predict/'
 
 FLAGS.vocab_file = BERT_BASE_DIR+'vocab.txt'
 FLAGS.bert_config_file = BERT_BASE_DIR+'bert_config.json'
 # FLAGS.init_checkpoint = BERT_BASE_DIR+'bert_model.ckpt'
 # FLAGS.init_checkpoint = OUTPUT_DIR+'model.ckpt-376'
-FLAGS.init_checkpoint_start = 'output-start/model.ckpt-21718'
-FLAGS.init_checkpoint_end = 'output-end/model.ckpt-21718'
+FLAGS.init_checkpoint_start = 'output-start/model.ckpt-248'
+FLAGS.init_checkpoint_end = 'output-end/model.ckpt-248'
 FLAGS.do_train = False
-FLAGS.train_file = SQUAD_DIR+'train-v2.0.json'
+FLAGS.train_file = SQUAD_DIR+'train-v2.0-min.json'
 FLAGS.do_predict = True
-FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
+FLAGS.predict_file = SQUAD_DIR+'dev-v2.0-min.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
 FLAGS.num_train_epochs = 2.0
@@ -167,37 +167,33 @@ def create_model_end(bert_config, is_training, input_ids, input_mask, segment_id
   hidden_size = final_hidden_shape[2]
 
   output_weights1 = tf.get_variable(
-      "cls/squad/output_weights1", [768, hidden_size],
+      "cls/squad/output_weights1", [384, hidden_size],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
   output_bias1 = tf.get_variable(
-      "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
-
-  output_weights = tf.get_variable(
-      "cls/squad/output_weights", [1, 768],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
-
-  output_bias = tf.get_variable(
-      "cls/squad/output_bias", [1], initializer=tf.zeros_initializer())
+      "cls/squad/output_bias1", [384], initializer=tf.zeros_initializer())
 
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
+  keep_prob = 1.0
+  if is_training:
+    keep_prob = 0.9
+  else:
+    keep_prob = 1.0
+
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
+  logits = tf.nn.relu(logits)
+  logits = tf.nn.dropout(logits, keep_prob)
 
-  logits = tf.matmul(logits, output_weights, transpose_b=True)
-  logits = tf.nn.bias_add(logits, output_bias)
-
-  logits = tf.reshape(logits, [batch_size, seq_length, 1])
+  logits = tf.reshape(logits, [batch_size, seq_length, 384])
   logits = tf.transpose(logits, [2, 0, 1])
-
+  
   unstacked_logits = tf.unstack(logits, axis=0)
+  e = tf.reduce_sum(unstacked_logits[0:384], 0)
 
-#   start_logits = unstacked_logits[0]
-  end_logits = unstacked_logits[0]
-
-  return end_logits
+  return e
 
 def create_model_start(bert_config, is_training, input_ids, input_mask, segment_ids,
                  use_one_hot_embeddings):
@@ -218,37 +214,33 @@ def create_model_start(bert_config, is_training, input_ids, input_mask, segment_
   hidden_size = final_hidden_shape[2]
 
   output_weights1 = tf.get_variable(
-      "cls/squad/output_weights1", [768, hidden_size],
+      "cls/squad/output_weights1", [384, hidden_size],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
   output_bias1 = tf.get_variable(
-      "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
-
-  output_weights = tf.get_variable(
-      "cls/squad/output_weights", [1, 768],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
-
-  output_bias = tf.get_variable(
-      "cls/squad/output_bias", [1], initializer=tf.zeros_initializer())
+      "cls/squad/output_bias1", [384], initializer=tf.zeros_initializer())
 
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
+  keep_prob = 1.0
+  if is_training:
+    keep_prob = 0.9
+  else:
+    keep_prob = 1.0
+
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
+  logits = tf.nn.relu(logits)
+  logits = tf.nn.dropout(logits, keep_prob)
 
-  logits = tf.matmul(logits, output_weights, transpose_b=True)
-  logits = tf.nn.bias_add(logits, output_bias)
-
-  logits = tf.reshape(logits, [batch_size, seq_length, 1])
+  logits = tf.reshape(logits, [batch_size, seq_length, 384])
   logits = tf.transpose(logits, [2, 0, 1])
-
+  
   unstacked_logits = tf.unstack(logits, axis=0)
+  s = tf.reduce_sum(unstacked_logits[0:384], 0)
 
-  start_logits = unstacked_logits[0]
-  # end_logits = unstacked_logits[0]
-
-  return start_logits
+  return s
 
 
 def model_fn_builder_end(bert_config, init_checkpoint, learning_rate,
