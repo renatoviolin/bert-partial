@@ -165,6 +165,13 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   output_bias1 = tf.get_variable(
       "cls/squad/output_bias1", [384], initializer=tf.zeros_initializer())
 
+  output_weights2 = tf.get_variable(
+      "cls/squad/output_weights2", [2, 384],
+      initializer=tf.truncated_normal_initializer(stddev=0.02))
+
+  output_bias2 = tf.get_variable(
+      "cls/squad/output_bias2", [2], initializer=tf.zeros_initializer())
+
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
@@ -176,21 +183,39 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
-  logits = modeling.gelu(logits)
+  logits = tf.nn.relu(logits)
   logits = tf.nn.dropout(logits, keep_prob)
 
-  logits = tf.reshape(logits, [batch_size, seq_length, 384])
+  logits = tf.matmul(logits, output_weights2, transpose_b=True)
+  logits = tf.nn.bias_add(logits, output_bias2)
+  logits = tf.nn.relu(logits)
+
+  logits = tf.reshape(logits, [batch_size, seq_length, 2])
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_sum(unstacked_logits[0:192], 0)
-  e = tf.reduce_sum(unstacked_logits[192:384], 0)
 
-#   (start_logits, end_logits) = (unstacked_logits[0], unstacked_logits[1])
-
-  (start_logits, end_logits) = (s, e)
+  (start_logits, end_logits) = (unstacked_logits[0], unstacked_logits[1])
 
   return (start_logits, end_logits)
+
+#   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
+#   logits = tf.nn.bias_add(logits, output_bias1)
+#   logits = modeling.gelu(logits)
+#   logits = tf.nn.dropout(logits, keep_prob)
+
+#   logits = tf.reshape(logits, [batch_size, seq_length, 384])
+#   logits = tf.transpose(logits, [2, 0, 1])
+  
+#   unstacked_logits = tf.unstack(logits, axis=0)
+#   s = tf.reduce_sum(unstacked_logits[0:192], 0)
+#   e = tf.reduce_sum(unstacked_logits[192:384], 0)
+
+# #   (start_logits, end_logits) = (unstacked_logits[0], unstacked_logits[1])
+
+#   (start_logits, end_logits) = (s, e)
+
+#   return (start_logits, end_logits)
 
 
 def model_fn_builder(bert_config, init_checkpoint, learning_rate,
