@@ -230,7 +230,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   
   keep_prob = 1.0
   if is_training:
-    keep_prob = 0.2
+    keep_prob = 0.5
   else:
     keep_prob = 1.0
 
