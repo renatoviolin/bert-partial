@@ -166,7 +166,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
 
   output_weights2 = tf.get_variable(
-      "cls/squad/output_weights2", [384, 512],
+      "cls/squad/output_weights2", [384, 768],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
   output_bias2 = tf.get_variable(
