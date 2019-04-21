@@ -236,15 +236,15 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   logits = tf.matmul(final_hidden_matrix, output_weights1, transpose_b=True)
   logits = tf.nn.bias_add(logits, output_bias1)
-  logits = tf.nn.tanh(logits)
+  logits = tf.nn.relu(logits)
   logits = tf.nn.dropout(logits, keep_prob)
 
   logits = tf.reshape(logits, [batch_size, seq_length, 384])
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_sum(unstacked_logits[0:192], 0)
-  e = tf.reduce_sum(unstacked_logits[192:384], 0)
+  s = tf.reduce_sum(unstacked_logits[0:192], 0) / 192.
+  e = tf.reduce_sum(unstacked_logits[192:384], 0) / 192.
 
   (start_logits, end_logits) = (s, e)
 
