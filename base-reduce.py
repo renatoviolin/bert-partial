@@ -188,8 +188,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_mean(unstacked_logits[0:256], 0)
-  e = tf.reduce_mean(unstacked_logits[256:512], 0)
+  s = tf.reduce_sum(unstacked_logits[0:256], 0)
+  e = tf.reduce_sum(unstacked_logits[256:512], 0)
 
   (start_logits, end_logits) = (s, e)
 
