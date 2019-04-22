@@ -133,7 +133,7 @@ FLAGS.do_predict = True
 FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
 FLAGS.train_batch_size = 12
 FLAGS.learning_rate = 3e-5
-FLAGS.num_train_epochs = 2.0
+FLAGS.num_train_epochs = 1.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
@@ -183,8 +183,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_mean(unstacked_logits[0:192], 0)
-  e = tf.reduce_mean(unstacked_logits[192:384], 0)
+  s = tf.reduce_sum(unstacked_logits[0:192], 0)
+  e = tf.reduce_sum(unstacked_logits[192:384], 0)
 
   (start_logits, end_logits) = (s, e)
 
