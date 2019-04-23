@@ -132,8 +132,8 @@ FLAGS.do_predict = True
 # FLAGS.predict_file = SQUAD_DIR+'dev-v1.1.json'
 FLAGS.predict_file = SQUAD_DIR+'dev-v2.0.json'
 FLAGS.train_batch_size = 12
-FLAGS.learning_rate = 1e-5
-FLAGS.num_train_epochs = 1.0
+FLAGS.learning_rate = 3e-5
+FLAGS.num_train_epochs = 2.0
 FLAGS.max_seq_length = 384 
 FLAGS.doc_stride = 128
 FLAGS.output_dir = OUTPUT_DIR
@@ -166,18 +166,18 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
       "cls/squad/output_bias1", [768], initializer=tf.zeros_initializer())
 
   output_weights2 = tf.get_variable(
-      "cls/squad/output_weights2", [384, 768],
+      "cls/squad/output_weights2", [192, 768],
       initializer=tf.truncated_normal_initializer(stddev=0.02))
 
   output_bias2 = tf.get_variable(
-      "cls/squad/output_bias2", [384], initializer=tf.zeros_initializer())
+      "cls/squad/output_bias2", [192], initializer=tf.zeros_initializer())
 
   final_hidden_matrix = tf.reshape(final_hidden,
                                    [batch_size * seq_length, hidden_size])
   
   keep_prob = 1.0
   if is_training:
-    keep_prob = 0.7
+    keep_prob = 0.9
   else:
     keep_prob = 1.0
 
@@ -191,12 +191,12 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   logits = tf.nn.relu(logits)
   logits = tf.nn.dropout(logits, keep_prob)
 
-  logits = tf.reshape(logits, [batch_size, seq_length, 384])
+  logits = tf.reshape(logits, [batch_size, seq_length, 192])
   logits = tf.transpose(logits, [2, 0, 1])
   
   unstacked_logits = tf.unstack(logits, axis=0)
-  s = tf.reduce_sum(unstacked_logits[0:192], 0)
-  e = tf.reduce_sum(unstacked_logits[192:384], 0)
+  s = tf.reduce_sum(unstacked_logits[0:96], 0)
+  e = tf.reduce_sum(unstacked_logits[96:192], 0)
 
   (start_logits, end_logits) = (s, e)
 
